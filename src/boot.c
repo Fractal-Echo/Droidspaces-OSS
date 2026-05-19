@@ -457,9 +457,11 @@ int internal_boot(struct ds_config *cfg) {
   /* 20b. Write identity markers for PID discovery (AFTER logs to ensure CLI
    * parent sees them before exiting background mode). */
   mkdir("run/droidspaces", 0755);
-  char marker_path[PATH_MAX];
-  snprintf(marker_path, sizeof(marker_path), "run/droidspaces/%s", cfg->uuid);
-  write_file(marker_path, ""); /* empty UUID marker */
+  if (cfg->uuid[0] != '\0') {
+    char marker_path[PATH_MAX];
+    snprintf(marker_path, sizeof(marker_path), "run/droidspaces/%s", cfg->uuid);
+    write_file(marker_path, ""); /* empty UUID marker */
+  }
 
   /* Save a normalized copy of the config inside /run for metadata recovery. */
   if (ds_config_save("run/droidspaces/container.config", cfg) < 0) {
