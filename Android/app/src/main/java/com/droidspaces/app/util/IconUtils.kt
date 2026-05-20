@@ -37,6 +37,7 @@ object IconUtils {
             s.contains("FreeBSD", true) -> R.drawable.ic_freebsd
             s.contains("Slackware", true) -> R.drawable.ic_slackware
             s.contains("Mint", true) -> R.drawable.ic_mint
+            s.contains("Azure", true) || s.contains("Mariner", true) -> R.drawable.ic_azure
             else -> null
         }
     }

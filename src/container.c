@@ -319,7 +319,6 @@ int start_rootfs(struct ds_config *cfg) {
   }
 
   /* 1. Logo & Uniqueness Check */
-  print_ds_banner();
   check_kernel_recommendation();
 
   /* 1b. Name Uniqueness Check
@@ -2477,5 +2476,6 @@ int restart_rootfs(struct ds_config *cfg) {
     return -1;
   }
   putchar('\n');
+  print_ds_banner();
   return start_rootfs(cfg);
 }
