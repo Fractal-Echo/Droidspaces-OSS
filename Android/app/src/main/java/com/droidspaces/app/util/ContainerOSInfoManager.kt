@@ -55,16 +55,23 @@ object ContainerOSInfoManager {
             ).exec()
             if (!result.isSuccess || result.out.isEmpty()) return@withContext
             val osInfo = parseOSRelease(result.out)
-            // Merge into existing cache entry if present, else store minimal info
             val existing = cache[containerName]
-            val updated = existing?.copy(
-                prettyName = osInfo.prettyName ?: existing.prettyName,
-                name = osInfo.name ?: existing.name
-            ) ?: osInfo
-            cache[containerName] = updated
-            PreferencesManager.getInstance(appContext).saveContainerOSInfo(containerName, updated)
+            if (existing != null) {
+                // Merge into existing full entry — preserve hostname + all live data
+                val updated = existing.copy(
+                    prettyName = osInfo.prettyName ?: existing.prettyName,
+                    name = osInfo.name ?: existing.name
+                )
+                cache[containerName] = updated
+                PreferencesManager.getInstance(appContext).saveContainerOSInfo(containerName, updated)
+            } else {
+                // No existing entry: write to persistent prefs only (for icon rendering on next
+                // app start), but skip in-memory cache so getCachedOSInfo returns null and the
+                // ViewModel's getOSInfo(useCache=false) loop populates a full entry with hostname.
+                PreferencesManager.getInstance(appContext).saveContainerOSInfo(containerName, osInfo)
+            }
             iconCacheVersion.intValue++
-            Log.i(TAG, "Icon prefetch done for $containerName: ${updated.prettyName}")
+            Log.i(TAG, "Icon prefetch done for $containerName: ${osInfo.prettyName}")
         } catch (e: Exception) {
             Log.w(TAG, "Icon prefetch failed for $containerName", e)
         }
