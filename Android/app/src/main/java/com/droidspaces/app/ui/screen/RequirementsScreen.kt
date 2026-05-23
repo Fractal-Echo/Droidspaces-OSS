@@ -132,8 +132,9 @@ CONFIG_DEVTMPFS=y
 # Overlay filesystem support (required for volatile mode)
 CONFIG_OVERLAY_FS=y
 
-# Enable xattr support on tmpfs
-# (required for NixOS setcap wrappers in /run/wrappers)
+# Enable xattr, posix acl support on tmpfs
+# For NixOS support
+CONFIG_TMPFS_POSIX_ACL=y
 CONFIG_TMPFS_XATTR=y
 
 # Firmware loading support
@@ -193,10 +194,10 @@ CONFIG_PID_NS=y
 # HW Access Support
 CONFIG_DEVTMPFS=y
 
-# --- Below configs are optional but recommended ---
-
-# Networking (Docker/NAT support)
+# Networking (Enhanced NAT support)
 CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
+
+# --- Below configs are optional but recommended ---
 
 # UFW support
 CONFIG_NETFILTER_XT_TARGET_REJECT=y
@@ -209,8 +210,9 @@ CONFIG_IP_SET_HASH_IP=y
 CONFIG_IP_SET_HASH_NET=y
 CONFIG_NETFILTER_XT_SET=y
 
-# Enable xattr support on tmpfs
-# (required for NixOS setcap wrappers in /run/wrappers)
+# Enable xattr, posix acl support on tmpfs
+# For NixOS support
+CONFIG_TMPFS_POSIX_ACL=y
 CONFIG_TMPFS_XATTR=y""",
                     guideUrl = "https://github.com/ravindu644/Droidspaces-OSS/blob/main/Documentation/Kernel-Configuration.md#configuring-gki-kernels",
                     snackbarHostState = snackbarHostState
