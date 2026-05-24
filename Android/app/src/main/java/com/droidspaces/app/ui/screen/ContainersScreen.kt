@@ -47,6 +47,7 @@ import com.droidspaces.app.ui.component.TerminalDialog
 import com.droidspaces.app.ui.component.EmptyState
 import com.droidspaces.app.ui.component.ErrorState
 import com.droidspaces.app.ui.component.RootUnavailableState
+import com.droidspaces.app.ui.component.RootfsRepoSheet
 import com.droidspaces.app.ui.viewmodel.ContainerViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -106,6 +107,9 @@ fun ContainersScreen(
 
     // Export state - tracks which container is pending export (waiting for file picker)
     var pendingExportContainer by remember { mutableStateOf<ContainerInfo?>(null) }
+
+    // Repo sheet visibility
+    var showRepoSheet by remember { mutableStateOf(false) }
 
     // Execute container export - writes archive to user-picked URI via temp file
     suspend fun executeExport(container: ContainerInfo, outputUri: Uri) {
@@ -684,29 +688,58 @@ fun ContainersScreen(
 
         // FAB LAYER (Above everything, below dialogs)
         if (isBackendAvailable && isRootAvailable) {
-            ExtendedFloatingActionButton(
-                onClick = { filePickerLauncher.launch("*/*") },
+            Column(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .navigationBarsPadding()
-                    .padding(end = 24.dp, bottom = 88.dp), // 88dp clears the floating tab bar
-                shape = RoundedCornerShape(20.dp),
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                icon = {
+                    .padding(end = 24.dp, bottom = 88.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.End
+            ) {
+                // Small secondary FAB: browse online repo (icon only)
+                SmallFloatingActionButton(
+                    onClick = { showRepoSheet = true },
+                    shape = RoundedCornerShape(16.dp),
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
+                ) {
                     Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
+                        imageVector = Icons.Default.CloudDownload,
+                        contentDescription = context.getString(R.string.repo_fab_label),
                         modifier = Modifier.size(20.dp)
                     )
-                },
-                text = {
-                    Text(
-                        text = context.getString(R.string.install),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold
-                    )
                 }
+
+                // Primary FAB: install local file
+                ExtendedFloatingActionButton(
+                    onClick = { filePickerLauncher.launch("*/*") },
+                    shape = RoundedCornerShape(20.dp),
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = context.getString(R.string.install),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                )
+            }
+        }
+
+        // Repo bottom sheet
+        if (showRepoSheet) {
+            RootfsRepoSheet(
+                onDismiss = { showRepoSheet = false },
+                onInstall = { uri -> onNavigateToInstallation(uri) }
             )
         }
 

@@ -18,7 +18,7 @@ object IconUtils {
             s.contains("Ubuntu", true) -> R.drawable.ic_ubuntu
             s.contains("Debian", true) -> R.drawable.ic_debian
             s.contains("Alpine", true) -> R.drawable.ic_alpine
-            s.contains("Arch", true) -> R.drawable.ic_arch
+            (s.contains("Arch-", true) || s.contains("Arch_", true) || s.contains("Arch ", true) || s.equals("Arch", true)) -> R.drawable.ic_arch
             s.contains("Fedora", true) -> R.drawable.ic_fedora
             s.contains("NixOS", true) -> R.drawable.ic_nixos
             s.contains("OpenWrt", true) -> R.drawable.ic_openwrt

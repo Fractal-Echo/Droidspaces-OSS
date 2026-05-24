@@ -500,4 +500,33 @@
     <string name="i_understand_caps">I WON\'T REPORT ANY BUGS</string>
     <string name="reboot_recommended">Reboot recommended to apply SELinux rules and start the daemon on boot.</string>
     <string name="hw_access_disclaimer">Starting from Droidspaces v6.1.0, udevd has real access to USB, block, input, TTY, and network subsystems. Your container can own hardware that Android is currently using.\n\nIf your keyboard, SD card, or USB device stops working in Android after launching a container - that is NOT a bug. The container took it. You asked for full hardware access.\n\nDo NOT report issues caused by hardware conflicts or Kernel panics while using this mode.</string>
+
+    <!-- Rootfs repository -->
+    <string name="repo_title">Rootfs Repository</string>
+    <string name="repo_fab_label">Repository</string>
+    <string name="repo_refresh">Refresh</string>
+    <string name="repo_failed_to_load">Failed to load repository</string>
+    <string name="repo_download">Download</string>
+    <string name="repo_cancel">Cancel</string>
+    <string name="repo_install">Install</string>
+    <string name="repo_retry">Retry</string>
+    <string name="repo_notification_description">Droidspaces rootfs download</string>
+    <string name="repo_error_server_http">Server returned HTTP %1$d</string>
+    <string name="repo_error_no_assets">No rootfs tarballs found in latest release</string>
+    <string name="repo_error_network">Network error</string>
+    <string name="repo_dl_error_unknown">Unknown error</string>
+    <string name="repo_dl_error_cannot_resume">Cannot resume download</string>
+    <string name="repo_dl_error_device_not_found">Storage not found</string>
+    <string name="repo_dl_error_file_exists">File already exists</string>
+    <string name="repo_dl_error_file_error">File system error</string>
+    <string name="repo_dl_error_http_data">HTTP data error</string>
+    <string name="repo_dl_error_no_space">Insufficient storage</string>
+    <string name="repo_dl_error_too_many_redirects">Too many redirects</string>
+    <string name="repo_dl_error_unhandled_http">Unexpected HTTP response</string>
+    <string name="repo_dl_error_not_found">File not found (404)</string>
+    <string name="repo_dl_error_code">Error code %1$d</string>
+    <string name="repo_status_ready">READY</string>
+    <string name="repo_status_downloading">DOWNLOADING</string>
+    <string name="repo_status_failed">FAILED</string>
+    <string name="repo_downloads_count">%1$s downloads</string>
 </resources>
