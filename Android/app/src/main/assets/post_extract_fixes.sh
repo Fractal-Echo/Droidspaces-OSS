@@ -105,14 +105,14 @@ if $TEST -f "$ROOTFS_PATH/usr/bin/systemctl" || $TEST -f "$ROOTFS_PATH/bin/syste
 
     log "Systemd detected (at $GUEST_SYSTEMD_PATH), applying fixes..."
 
-    # Mask problematic services for Android kernels
+    # 01. Mask problematic services for Android kernels
     log "Masking problematic systemd services..."
     # Mask systemd-networkd-wait-online.service
     $LN -sf /dev/null "$ROOTFS_PATH/etc/systemd/system/systemd-networkd-wait-online.service"
     # Mask systemd-journald-audit.socket to prevent deadlocks on Android kernels
     $LN -sf /dev/null "$ROOTFS_PATH/etc/systemd/system/systemd-journald-audit.socket"
 
-    # Journald configuration (skip Audit, KMsg, etc)
+    # 02. Journald configuration (skip Audit, KMsg, etc)
     log "Optimizing journald for Android and applying hardening..."
     $CAT >> "$ROOTFS_PATH/etc/systemd/journald.conf" << 'EOT'
 [Journal]
@@ -130,7 +130,7 @@ MaxRetentionSec=7day
 MaxLevelStore=info
 EOT
 
-    # Enable essential services
+    # 03. Enable essential services
     log "Enabling essential systemd services..."
     $MKDIR -p "$ROOTFS_PATH/etc/systemd/system/multi-user.target.wants"
     for service in dbus.service systemd-udevd.service systemd-resolved.service systemd-networkd.service NetworkManager.service; do
@@ -139,7 +139,7 @@ EOT
         fi
     done
 
-    # Disable power button handling in systemd-logind
+    # 04. Disable power button handling in systemd-logind
     log "Disabling power/suspend button handling in systemd-logind..."
     $MKDIR -p "$ROOTFS_PATH/etc/systemd/logind.conf.d"
     $CAT > "$ROOTFS_PATH/etc/systemd/logind.conf.d/99-power-key.conf" << 'EOF'
@@ -151,9 +151,9 @@ HandlePowerKeyLongPress=ignore
 HandlePowerKeyLongPressHibernate=ignore
 EOF
 
-    # Apply udev overrides
+    # 05. Apply udev overrides
     log "Applying udev overrides..."
-    # 1. Trigger override (Prevents coldplugging Android hardware)
+    # 05a. Trigger override (Prevents coldplugging Android hardware)
     OVERRIDE_DIR="$ROOTFS_PATH/etc/systemd/system/systemd-udev-trigger.service.d"
     $MKDIR -p "$OVERRIDE_DIR"
     $CAT > "$OVERRIDE_DIR/override.conf" << 'EOF'
@@ -162,13 +162,26 @@ ExecStart=
 ExecStart=-/usr/bin/udevadm trigger --subsystem-match=usb --subsystem-match=block --subsystem-match=input --subsystem-match=tty --subsystem-match=net
 EOF
 
-    # 2. Read-only path overrides to prevent failures
+    # 05b. Read-only path overrides to prevent failures
     for unit in systemd-udevd.service systemd-udev-trigger.service systemd-udev-settle.service systemd-udevd-kernel.socket systemd-udevd-control.socket; do
         $MKDIR -p "$ROOTFS_PATH/etc/systemd/system/${unit}.d"
         $PRINTF "[Unit]\nConditionPathIsReadWrite=\n" > "$ROOTFS_PATH/etc/systemd/system/${unit}.d/99-readonly-fix.conf"
     done
 
-    # 3. Limit specific network services to only start in NAT mode
+    # 05c. Limit udev services to only start if hardware access is enabled
+    log "Applying hardware access limits to udev services..."
+    for unit in systemd-udevd.service systemd-udev-trigger.service systemd-udev-settle.service; do
+        if $TEST -f "$ROOTFS_PATH/$GUEST_SYSTEMD_PATH/$unit" || $TEST -f "$ROOTFS_PATH/etc/systemd/system/multi-user.target.wants/$unit"; then
+            $MKDIR -p "$ROOTFS_PATH/etc/systemd/system/${unit}.d"
+            $CAT > "$ROOTFS_PATH/etc/systemd/system/${unit}.d/99-hwaccess-limit.conf" << 'EOF'
+[Service]
+ExecCondition=
+ExecCondition=/bin/sh -c "grep -q 'enable_hw_access=1' /run/droidspaces/container.config"
+EOF
+        fi
+    done
+
+    # 06. Limit specific network services to only start in NAT mode
     # Prevents cellular network breakage when running in host network mode
     log "Applying NAT mode guards to network services..."
     for unit in NetworkManager.service dhcpcd.service systemd-resolved.service systemd-networkd.service; do
@@ -182,7 +195,7 @@ EOF
         fi
     done
 
-    # 4. Configure systemd-networkd for eth* interfaces
+    # 07. Configure systemd-networkd for eth* interfaces
     log "Configuring systemd network for eth* interfaces..."
     $MKDIR -p "$ROOTFS_PATH/etc/systemd/network"
     $CAT > "$ROOTFS_PATH/etc/systemd/network/10-eth-dhcp.network" << 'EOF'
@@ -203,7 +216,7 @@ else
     log "Systemd not found, skipping systemd-specific fixes"
 fi
 
-# Configure logrotate
+# 08. Configure logrotate
 log "Configuring logrotate for Android..."
 if $TEST -f "$ROOTFS_PATH/etc/logrotate.conf"; then
     $SED -i 's/^#maxsize.*/maxsize 50M/' "$ROOTFS_PATH/etc/logrotate.conf"
