@@ -8,6 +8,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -61,6 +62,7 @@ fun ContainerConfigScreen(
     initialTx11ExtraFlags: String = "",
     initialEnableVirgl: Boolean = false,
     initialVirglExtraFlags: String = "",
+    initialEnablePulseaudio: Boolean = false,
     initialSelinuxPermissive: Boolean = false,
     initialVolatileMode: Boolean = false,
     initialBindMounts: List<BindMount> = emptyList(),
@@ -84,6 +86,7 @@ fun ContainerConfigScreen(
         tx11ExtraFlags: String,
         enableVirgl: Boolean,
         virglExtraFlags: String,
+        enablePulseaudio: Boolean,
         selinuxPermissive: Boolean,
         volatileMode: Boolean,
         bindMounts: List<BindMount>,
@@ -109,6 +112,7 @@ fun ContainerConfigScreen(
     var tx11ExtraFlags by remember { mutableStateOf(initialTx11ExtraFlags) }
     var enableVirgl by remember { mutableStateOf(initialEnableVirgl) }
     var virglExtraFlags by remember { mutableStateOf(initialVirglExtraFlags) }
+    var enablePulseaudio by remember { mutableStateOf(initialEnablePulseaudio) }
     var selinuxPermissive by remember { mutableStateOf(initialSelinuxPermissive) }
     var volatileMode by remember { mutableStateOf(initialVolatileMode) }
     var bindMounts by remember { mutableStateOf(initialBindMounts) }
@@ -293,7 +297,7 @@ fun ContainerConfigScreen(
                             .clickable(
                                 enabled = isUpstreamValid,
                                 onClick = {
-                                    onNext(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, tx11ExtraFlags, enableVirgl, virglExtraFlags, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, customInit, staticNatIp, forceCgroupv1, blockNestedNs, privileged, if (envFileContent.isBlank()) null else envFileContent, upstreamInterfaces, portForwards)
+                                    onNext(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, tx11ExtraFlags, enableVirgl, virglExtraFlags, enablePulseaudio, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, customInit, staticNatIp, forceCgroupv1, blockNestedNs, privileged, if (envFileContent.isBlank()) null else envFileContent, upstreamInterfaces, portForwards)
                                 },
                                 indication = androidx.compose.material.ripple.rememberRipple(bounded = true),
                                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -621,6 +625,15 @@ fun ContainerConfigScreen(
                 description = context.getString(R.string.enable_virgl_description),
                 checked = enableVirgl,
                 onCheckedChange = { enableVirgl = it },
+                enabled = true
+            )
+
+            ToggleCard(
+                icon = Icons.AutoMirrored.Filled.VolumeUp,
+                title = context.getString(R.string.enable_pulseaudio),
+                description = context.getString(R.string.enable_pulseaudio_description),
+                checked = enablePulseaudio,
+                onCheckedChange = { enablePulseaudio = it },
                 enabled = true
             )
 

@@ -11,6 +11,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -98,6 +99,7 @@ fun EditContainerScreen(
     var tx11ExtraFlags by remember { mutableStateOf(container.tx11ExtraFlags) }
     var enableVirgl by remember { mutableStateOf(container.enableVirgl) }
     var virglExtraFlags by remember { mutableStateOf(container.virglExtraFlags) }
+    var enablePulseaudio by remember { mutableStateOf(container.enablePulseaudio) }
     var selinuxPermissive by remember { mutableStateOf(container.selinuxPermissive) }
     var volatileMode by remember { mutableStateOf(container.volatileMode) }
     var bindMounts by remember { mutableStateOf(container.bindMounts) }
@@ -123,6 +125,7 @@ fun EditContainerScreen(
     var savedTx11ExtraFlags by remember { mutableStateOf(container.tx11ExtraFlags) }
     var savedEnableVirgl by remember { mutableStateOf(container.enableVirgl) }
     var savedVirglExtraFlags by remember { mutableStateOf(container.virglExtraFlags) }
+    var savedEnablePulseaudio by remember { mutableStateOf(container.enablePulseaudio) }
     var savedSelinuxPermissive by remember { mutableStateOf(container.selinuxPermissive) }
     var savedVolatileMode by remember { mutableStateOf(container.volatileMode) }
     var savedBindMounts by remember { mutableStateOf(container.bindMounts) }
@@ -160,6 +163,7 @@ fun EditContainerScreen(
             tx11ExtraFlags != savedTx11ExtraFlags ||
             enableVirgl != savedEnableVirgl ||
             virglExtraFlags != savedVirglExtraFlags ||
+            enablePulseaudio != savedEnablePulseaudio ||
             selinuxPermissive != savedSelinuxPermissive ||
             volatileMode != savedVolatileMode ||
             bindMounts != savedBindMounts ||
@@ -203,6 +207,7 @@ fun EditContainerScreen(
                     tx11ExtraFlags = tx11ExtraFlags,
                     enableVirgl = enableVirgl,
                     virglExtraFlags = virglExtraFlags,
+                    enablePulseaudio = enablePulseaudio,
                     selinuxPermissive = selinuxPermissive,
                     volatileMode = volatileMode,
                     bindMounts = bindMounts,
@@ -237,6 +242,7 @@ fun EditContainerScreen(
                         savedTx11ExtraFlags = tx11ExtraFlags
                         savedEnableVirgl = enableVirgl
                         savedVirglExtraFlags = virglExtraFlags
+                        savedEnablePulseaudio = enablePulseaudio
                         savedSelinuxPermissive = selinuxPermissive
                         savedVolatileMode = volatileMode
                         savedBindMounts = bindMounts
@@ -880,6 +886,18 @@ fun EditContainerScreen(
                 onCheckedChange = {
                     clearFocus()
                     enableVirgl = it
+                },
+                enabled = true
+            )
+
+            ToggleCard(
+                icon = Icons.AutoMirrored.Filled.VolumeUp,
+                title = context.getString(R.string.enable_pulseaudio),
+                description = context.getString(R.string.enable_pulseaudio_description),
+                checked = enablePulseaudio,
+                onCheckedChange = {
+                    clearFocus()
+                    enablePulseaudio = it
                 },
                 enabled = true
             )
