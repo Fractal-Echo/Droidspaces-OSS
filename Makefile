@@ -60,6 +60,7 @@ SRCS = $(SRC_DIR)/main.c \
        $(SRC_DIR)/android/x11.c \
        $(SRC_DIR)/android/virgl.c \
        $(SRC_DIR)/android/pulseaudio.c \
+       $(SRC_DIR)/android/wayland.c \
        $(SRC_DIR)/virtualize.c
 
 # Compiler flags - hardened warning set, all warnings are errors

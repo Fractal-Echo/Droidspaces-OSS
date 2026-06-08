@@ -87,6 +87,10 @@ void ds_env_boot_setup(struct ds_config *cfg) {
     setenv("GALLIUM_DRIVER", "virpipe", 1);
   if (is_android() && cfg->pulseaudio)
     setenv("PULSE_SERVER", "unix:" DS_PULSE_SOCKET, 1);
+  if (is_android() && cfg->wayland) {
+    setenv("WAYLAND_DISPLAY", DS_WL_SOCKET_NAME, 1);
+    setenv("XDG_RUNTIME_DIR", DS_WL_CONTAINER_RUNTIME, 1);
+  }
 }
 
 void ds_env_save(const char *path, struct ds_config *cfg) {
@@ -122,6 +126,10 @@ void ds_env_save(const char *path, struct ds_config *cfg) {
     fprintf(f, "export GALLIUM_DRIVER='virpipe'\n");
   if (is_android() && cfg->pulseaudio)
     fprintf(f, "export PULSE_SERVER='unix:" DS_PULSE_SOCKET "'\n");
+  if (is_android() && cfg->wayland) {
+    fprintf(f, "export WAYLAND_DISPLAY='" DS_WL_SOCKET_NAME "'\n");
+    fprintf(f, "export XDG_RUNTIME_DIR='" DS_WL_CONTAINER_RUNTIME "'\n");
+  }
 
   fclose(f);
   chmod(path, 0755);

@@ -153,6 +153,20 @@
 #define TX11_PACTL_BIN TX11_PREFIX "/bin/pactl"
 #define TX11_PULSE_DEFAULT_SINK "AAudio_sink"
 
+/* Wayland compositor paths (Android only — compositor runs inside Droidspaces app) */
+/* Host-side socket created by libwayland-compositor.so in the app's data dir.
+ * The droidspaces binary bind-mounts it into the container's /run/user/0. */
+#define DS_WL_APP_PKG          "com.droidspaces.app"
+#define DS_WL_APP_DATA_DIR     "/data/data/" DS_WL_APP_PKG
+#define DS_WL_RUNTIME_DIR      DS_WL_APP_DATA_DIR "/files/usr/tmp"
+#define DS_WL_RUNTIME_OLDROOT  "/.old_root" DS_WL_RUNTIME_DIR
+#define DS_WL_SOCKET_NAME      "wayland-1"
+#define DS_WL_HOST_SOCKET      DS_WL_RUNTIME_DIR "/" DS_WL_SOCKET_NAME
+#define DS_WL_HOST_SOCKET_OLDROOT DS_WL_RUNTIME_OLDROOT "/" DS_WL_SOCKET_NAME
+/* Container-side: standard XDG_RUNTIME_DIR location for root user */
+#define DS_WL_CONTAINER_RUNTIME "/run/user/0"
+#define DS_WL_CONTAINER_SOCKET  DS_WL_CONTAINER_RUNTIME "/" DS_WL_SOCKET_NAME
+
 /* File Extensions */
 #define DS_EXT_PID ".pid"
 #define DS_EXT_XPID ".xpid"
@@ -339,6 +353,7 @@ struct ds_config {
   int virgl;              /* --virgl (Android only) */
   char *virgl_extra_flags; /* --virgl-flags "..." (heap, NULL if unset) */
   int pulseaudio;          /* --pulse-audio (Android only) */
+  int wayland;             /* --wayland (Android only) */
   int volatile_mode;       /* --volatile */
   int disable_ipv6;        /* --disable-ipv6 */
   int android_storage;     /* --enable-android-storage */
@@ -359,6 +374,8 @@ struct ds_config {
   pid_t x11_pid;                  /* PID of the Termux-X11 server process */
   pid_t virgl_pid;                /* PID of the VirGL server process */
   pid_t pulse_pid;                /* PID of the PulseAudio daemon process */
+  /* wayland: no daemon PID — the compositor runs inside the Android app process.
+   * We only track whether the socket bridge has been set up. */
   int is_img_mount;               /* 1 if rootfs was loop-mounted from .img */
   char img_mount_point[PATH_MAX]; /* where the .img was mounted */
   ds_init_type_t init_type;       /* detected container PID 1 init family */
@@ -639,6 +656,17 @@ void ds_pulse_daemon_stop(struct ds_config *cfg);
 int ds_setup_pulse_socket(struct ds_config *cfg);
 
 /* ---------------------------------------------------------------------------
+ * wayland.c
+ *
+ * No daemon to start/stop: the Wayland compositor runs inside the Droidspaces
+ * Android app as libwayland-compositor.so.  The backend's job is purely to
+ * bridge the socket that the app-side compositor creates into the container.
+ * ---------------------------------------------------------------------------*/
+
+int ds_setup_wayland_socket(struct ds_config *cfg);
+int check_wayland_needs(void);
+
+/* ---------------------------------------------------------------------------
  * network.c
  * ---------------------------------------------------------------------------*/
 
@@ -792,6 +820,7 @@ int check_selinux_permissive_needs(void);
 int check_x11_needs(void);
 int check_virgl_needs(void);
 int check_pulse_needs(void);
+int check_wayland_needs(void);
 
 /*
  * ds_feature_needs - generic feature-needs scanner.

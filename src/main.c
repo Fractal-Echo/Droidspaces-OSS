@@ -77,8 +77,9 @@ void print_usage(void) {
       "      --virgl-flags=\"FLAGS\"   Extra flags passed to "
       "virgl_test_server_android\n"
       "      --pulse-audio         Configure PulseAudio sound server "
-      "support\n\n"
-
+      "support\n"
+      "      --wayland             Bridge Wayland compositor socket into container\n\n");
+  printf(
       C_BOLD "Options (Security & Boot):" C_RESET "\n"
       "  -P, --selinux-permissive  Set host SELinux to permissive mode\n"
       "  -V, --volatile            Discard changes on exit (OverlayFS)\n"
@@ -368,6 +369,7 @@ int main(int argc, char **argv) {
       {"virgl", no_argument, 0, 270},
       {"virgl-flags", required_argument, 0, 272},
       {"pulse-audio", no_argument, 0, 273},
+      {"wayland", no_argument, 0, 274},
       {"reset", no_argument, 0, 256},
       {"format", no_argument, 0, 265},
       {"memory", required_argument, 0, 266},
@@ -622,6 +624,9 @@ int main(int argc, char **argv) {
       break;
     case 273:
       cfg.pulseaudio = 1;
+      break;
+    case 274:
+      cfg.wayland = 1;
       break;
     case 'I':
       cfg.disable_ipv6 = 1;
