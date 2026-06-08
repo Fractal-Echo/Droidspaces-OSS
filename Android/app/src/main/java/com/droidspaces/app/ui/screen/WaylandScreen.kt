@@ -45,7 +45,8 @@ import com.droidspaces.app.wayland.WaylandSurface
  *
  * IME / keyboard:
  *   - Bottom toolbar has a keyboard toggle button (shows/hides soft keyboard)
- *   - Display area uses imePadding() so the compositor resizes with the IME
+ *   - Display area is fixed — the compositor surface never resizes for IME
+ *   - Bottom toolbar uses imePadding() so it slides above the soft keyboard
  *   - SUP key replaced with keyboard toggle icon
  *
  * Bottom toolbar: fullscreen ▏ ESC TAB CTRL ALT ▏ ⌨ ▏ ↑ ↓ ← →
@@ -141,12 +142,11 @@ fun WaylandScreen(onNavigateBack: () -> Unit) {
             }
         }
 
-        // ── Display area (resizes with IME) ──────────────────────────────────
+        // ── Display area — fixed size, never resizes for IME ─────────────────
         Box(
             modifier         = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .imePadding()   // shrinks when soft keyboard is open
                 .background(MaterialTheme.colorScheme.surface),
             contentAlignment = Alignment.Center,
         ) {
@@ -192,13 +192,14 @@ private fun WaylandKeyboardBar(
     Surface(
         color          = MaterialTheme.colorScheme.surfaceContainerLow,
         tonalElevation = 0.dp,
+        modifier       = Modifier.imePadding(),  // toolbar slides up over IME; compositor stays fixed
     ) {
         Column {
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
+                    .navigationBarsPadding()     // absorb gesture nav bar height
                     .height(52.dp)
                     .padding(horizontal = 4.dp),
                 verticalAlignment     = Alignment.CenterVertically,
