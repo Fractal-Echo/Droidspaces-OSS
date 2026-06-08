@@ -1,9 +1,6 @@
 package com.droidspaces.app.ui.screen
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -13,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -35,7 +31,6 @@ import com.droidspaces.app.wayland.WaylandManager
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WaylandScreen(onNavigateBack: () -> Unit) {
-    val context = LocalContext.current
     val isRunning = WaylandManager.isRunning
 
     // Physical back → go back, compositor stays alive.
@@ -120,7 +115,6 @@ fun WaylandScreen(onNavigateBack: () -> Unit) {
 
 @Composable
 private fun CompositorOffPlaceholder(onNavigateBack: () -> Unit) {
-    val context = LocalContext.current
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp),
