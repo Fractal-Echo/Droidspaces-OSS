@@ -32,6 +32,7 @@
 #include "compositor.h"
 #include "renderer.h"
 #include "server_internal.h"  /* compositor_pointer_event, compositor_keyboard_key_event … */
+#include "keycode_map.h"      /* android_keycode_to_linux() */
 
 #define TAG "DroidspacesWayland"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  TAG, __VA_ARGS__)
@@ -370,11 +371,39 @@ Java_com_droidspaces_app_wayland_WaylandSurface_nativeOnPointerRightClick(
 JNIEXPORT void JNICALL
 Java_com_droidspaces_app_wayland_WaylandSurface_nativeOnKeyEvent(
         JNIEnv *env, jobject thiz,
-        jint key_linux, jboolean is_down, jint time_ms)
+        jint android_keycode, jboolean is_down, jint time_ms)
 {
     (void)env; (void)thiz;
-    /* Enqueue — drained on the Wayland thread to avoid thread-safety issues. */
-    keyq_push((uint32_t)time_ms, (uint32_t)key_linux, is_down ? 1u : 0u);
+    /* Convert Android KEYCODE_* → Linux evdev key code. */
+    uint32_t key_linux = android_keycode_to_linux((int)android_keycode);
+    if (key_linux == 0) return;
+    keyq_push((uint32_t)time_ms, key_linux, is_down ? 1u : 0u);
+}
+
+/*
+ * nativeEnsureFocus — send a synthetic pointer-move to the center of the
+ * compositor output to establish keyboard focus via the normal, fully
+ * mutex-protected compositor_pointer_event() code path.
+ *
+ * Safe: uses the exact same path as a real touch event. No direct surface
+ * list walking, no manual keyboard_focus_update() calls.
+ * Call before the first toolbar key press so clients receive wl_keyboard.enter.
+ */
+JNIEXPORT void JNICALL
+Java_com_droidspaces_app_wayland_WaylandSurface_nativeEnsureFocus(
+        JNIEnv *env, jobject thiz)
+{
+    (void)env; (void)thiz;
+    if (!g_server) return;
+    int32_t w = 0, h = 0;
+    compositor_get_output_size(g_server, &w, &h);
+    if (w <= 0 || h <= 0) return;
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    uint32_t t = (uint32_t)((ts.tv_sec * 1000 + ts.tv_nsec / 1000000) & 0xFFFFFFFFu);
+    compositor_pointer_event(g_server,
+        (float)(w / 2), (float)(h / 2),
+        6 /* POINTER_ACTION_POINTER_MOVE */, t);
 }
 
 JNIEXPORT void JNICALL

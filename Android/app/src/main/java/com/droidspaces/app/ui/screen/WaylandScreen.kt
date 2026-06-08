@@ -1,10 +1,8 @@
 package com.droidspaces.app.ui.screen
 
 import android.app.Activity
-import android.content.Context
 import android.os.SystemClock
 import android.view.KeyEvent
-import android.view.inputmethod.InputMethodManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -30,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.droidspaces.app.wayland.WaylandDisplayLayout
 import com.droidspaces.app.wayland.WaylandDisplayView
 import com.droidspaces.app.wayland.WaylandManager
 import com.droidspaces.app.wayland.WaylandSurface
@@ -58,6 +57,7 @@ fun WaylandScreen(onNavigateBack: () -> Unit) {
     var isFullscreen     by remember { mutableStateOf(false) }
 
     var isKeyboardVisible by remember { mutableStateOf(false) }
+    var waylandLayout: WaylandDisplayLayout? by remember { mutableStateOf(null) }
 
     val view             = LocalView.current
 
@@ -151,7 +151,10 @@ fun WaylandScreen(onNavigateBack: () -> Unit) {
             contentAlignment = Alignment.Center,
         ) {
             if (isRunning) {
-                WaylandDisplayView(modifier = Modifier.fillMaxSize())
+                WaylandDisplayView(
+                    modifier    = Modifier.fillMaxSize(),
+                    onViewReady = { waylandLayout = it },
+                )
             } else {
                 CompositorOffPlaceholder(onNavigateBack)
             }
@@ -164,14 +167,11 @@ fun WaylandScreen(onNavigateBack: () -> Unit) {
                 isKeyboardVisible  = isKeyboardVisible,
                 onFullscreenToggle = { isFullscreen = !isFullscreen },
                 onKeyboardToggle   = {
-                    val imm = view.context.getSystemService(Context.INPUT_METHOD_SERVICE)
-                            as? InputMethodManager
                     if (isKeyboardVisible) {
-                        imm?.hideSoftInputFromWindow(view.windowToken, 0)
+                        waylandLayout?.hideKeyboard()
                         isKeyboardVisible = false
                     } else {
-                        view.requestFocus()
-                        imm?.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)
+                        waylandLayout?.showKeyboard()
                         isKeyboardVisible = true
                     }
                 },
@@ -276,6 +276,7 @@ private fun RowScope.WlIconKey(
 
 private fun sendKey(keyCode: Int) {
     val t = (SystemClock.uptimeMillis() and 0x7FFF_FFFFL).toInt()
+    WaylandSurface.nativeEnsureFocus()   // ensure wl_keyboard.enter before key delivery
     WaylandSurface.nativeOnKeyEvent(keyCode, true,  t)
     WaylandSurface.nativeOnKeyEvent(keyCode, false, t + 1)
 }

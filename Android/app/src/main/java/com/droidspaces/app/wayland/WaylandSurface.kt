@@ -43,8 +43,16 @@ object WaylandSurface {
     external fun nativeOnPointerAxis(deltaX: Float, deltaY: Float, timeMs: Int)
     external fun nativeOnPointerRightClick(x: Float, y: Float, timeMs: Int)
 
-    /** key_linux: Linux evdev key code (not Android KeyEvent.KEYCODE_*). */
-    external fun nativeOnKeyEvent(keyLinux: Int, isDown: Boolean, timeMs: Int)
+    /** androidKeyCode: Android KeyEvent.KEYCODE_* — converted to Linux evdev in C. */
+    external fun nativeOnKeyEvent(androidKeyCode: Int, isDown: Boolean, timeMs: Int)
+
+    /**
+     * Send a synthetic pointer-move to the center of the compositor output.
+     * This triggers keyboard_focus_update() via the normal mutex-protected
+     * compositor_pointer_event() path — establishing wl_keyboard.enter on
+     * whichever surface is at the center. Safe to call before toolbar key presses.
+     */
+    external fun nativeEnsureFocus()
 
     external fun nativeSetCursorVisible(visible: Boolean)
 }
