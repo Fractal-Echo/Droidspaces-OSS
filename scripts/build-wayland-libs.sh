@@ -3,13 +3,15 @@
 #
 # Output: Android/app/src/main/jniLibs/arm64-v8a/
 #
-# Prerequisites (host):
-#   meson  ninja  wayland  wayland-protocols
-#   Arch:  pacman -S meson ninja wayland wayland-protocols
-#   Ubuntu: apt install meson ninja-build libwayland-dev wayland-protocols
+# On Debian/Ubuntu this script auto-installs missing dependencies:
+#   - Build tools: meson ninja-build pkg-config autoconf libtool curl unzip
+#   - Wayland dev: libwayland-dev wayland-protocols
+#   - Android NDK r27c (downloaded to ~/.android/ndk/ if not found)
 #
-# Android NDK: set ANDROID_NDK_HOME, or place under $HOME/Android/Sdk/ndk/
-# wayland-scanner: from PATH, or set WAYLAND_SCANNER
+# On other distros, install dependencies manually:
+#   Arch:   pacman -S meson ninja wayland wayland-protocols
+#   Fedora: dnf install meson ninja-build wayland-devel wayland-protocols-devel
+#   Then set ANDROID_NDK_HOME to your NDK path.
 #
 # Usage:
 #   ./scripts/build-wayland-libs.sh
@@ -21,46 +23,139 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TRIERARCH_WL="$REPO_ROOT/third_party/trierarch/trierarch-wayland"
 JNILIBS="$REPO_ROOT/Android/app/src/main/jniLibs/arm64-v8a"
 
+NDK_VERSION="r27c"
+NDK_ZIP="android-ndk-${NDK_VERSION}-linux.zip"
+NDK_URL="https://dl.google.com/android/repository/${NDK_ZIP}"
+NDK_DEFAULT_DIR="$HOME/.android/ndk/android-ndk-${NDK_VERSION}"
+
 # ---------------------------------------------------------------------------
-# NDK detection
+# Debian/Ubuntu dependency installer
 # ---------------------------------------------------------------------------
-NDK="${ANDROID_NDK_HOME:-${NDK:-}}"
-if [ -z "$NDK" ] || [ ! -d "$NDK" ]; then
-    NDK_BASE="$HOME/Android/Sdk/ndk"
-    if [ -d "$NDK_BASE" ]; then
-        NDK=$(find "$NDK_BASE" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort -V | tail -1)
-    fi
-fi
-[ -n "$NDK" ] && [ -d "$NDK" ] || {
-    echo "[!] Android NDK not found."
-    echo "    Set ANDROID_NDK_HOME or install NDK under \$HOME/Android/Sdk/ndk/"
-    exit 1
+install_debian_deps() {
+    echo "[*] Installing build dependencies (sudo required)..."
+    sudo apt-get update
+    sudo apt-get install -y \
+        meson \
+        ninja-build \
+        pkg-config \
+        autoconf \
+        automake \
+        libtool \
+        curl \
+        unzip \
+        git \
+        libwayland-dev \
+        wayland-protocols
+    echo "[+] Build dependencies installed"
 }
 
+is_debian() {
+    [ -f /etc/debian_version ] || [ -f /etc/apt/sources.list ]
+}
+
+# ---------------------------------------------------------------------------
+# Tool checks with auto-install on Debian/Ubuntu
+# ---------------------------------------------------------------------------
+NEED_DEPS=0
+for tool in meson ninja pkg-config autoconf; do
+    if ! command -v "$tool" > /dev/null 2>&1; then
+        echo "[!] Missing tool: $tool"
+        NEED_DEPS=1
+    fi
+done
+
+if ! command -v wayland-scanner > /dev/null 2>&1; then
+    echo "[!] Missing tool: wayland-scanner"
+    NEED_DEPS=1
+fi
+
+if [ "$NEED_DEPS" = "1" ]; then
+    if is_debian; then
+        install_debian_deps
+    else
+        echo "[!] Missing build dependencies. Install them manually:"
+        echo "    Arch:   pacman -S meson ninja wayland wayland-protocols"
+        echo "    Fedora: dnf install meson ninja-build wayland-devel wayland-protocols-devel"
+        exit 1
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# NDK detection with auto-install on Debian/Ubuntu
+# ---------------------------------------------------------------------------
+NDK="${ANDROID_NDK_HOME:-${NDK:-}}"
+
+if [ -z "$NDK" ] || [ ! -d "$NDK" ]; then
+    # Check standard locations
+    for candidate in \
+        "$NDK_DEFAULT_DIR" \
+        "$HOME/Android/Sdk/ndk/android-ndk-${NDK_VERSION}" \
+        "$HOME/android-ndk-${NDK_VERSION}" \
+        "/opt/android-ndk"
+    do
+        if [ -d "$candidate/toolchains" ]; then
+            NDK="$candidate"
+            echo "[*] Found NDK at: $NDK"
+            break
+        fi
+    done
+
+    # Also scan $HOME/Android/Sdk/ndk/ for any installed version
+    if [ -z "$NDK" ] && [ -d "$HOME/Android/Sdk/ndk" ]; then
+        NDK=$(find "$HOME/Android/Sdk/ndk" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort -V | tail -1)
+        [ -n "$NDK" ] && echo "[*] Found NDK at: $NDK"
+    fi
+fi
+
+if [ -z "$NDK" ] || [ ! -d "$NDK" ]; then
+    if is_debian; then
+        echo "[*] Android NDK ${NDK_VERSION} not found. Downloading..."
+        echo "[*] URL: $NDK_URL"
+        echo "[*] This is a ~560MB download, please wait..."
+
+        mkdir -p "$HOME/.android/ndk"
+        TMPZIP="$HOME/.android/ndk/${NDK_ZIP}"
+
+        curl -L --progress-bar "$NDK_URL" -o "$TMPZIP"
+
+        echo "[*] Extracting NDK..."
+        unzip -q "$TMPZIP" -d "$HOME/.android/ndk/"
+        rm -f "$TMPZIP"
+
+        NDK="$NDK_DEFAULT_DIR"
+        echo "[+] NDK installed to: $NDK"
+        echo ""
+        echo "    Add this to your shell profile to avoid re-downloading:"
+        echo "    export ANDROID_NDK_HOME=\"$NDK\""
+        echo ""
+    else
+        echo "[!] Android NDK not found."
+        echo "    Download NDK ${NDK_VERSION} from:"
+        echo "    https://developer.android.com/ndk/downloads"
+        echo "    Then set: export ANDROID_NDK_HOME=/path/to/ndk"
+        exit 1
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# NDK toolchain setup
+# ---------------------------------------------------------------------------
 UNAME_S=$(uname -s | tr '[:upper:]' '[:lower:]')
 UNAME_M=$(uname -m)
 case "$UNAME_M" in
-  x86_64|amd64)   NDK_HOST="${UNAME_S}-x86_64" ;;
-  aarch64|arm64)  NDK_HOST="${UNAME_S}-arm64"   ;;
-  *)               NDK_HOST="${UNAME_S}-x86_64" ;;
+    x86_64|amd64)  NDK_HOST="${UNAME_S}-x86_64" ;;
+    aarch64|arm64) NDK_HOST="${UNAME_S}-arm64"   ;;
+    *)             NDK_HOST="${UNAME_S}-x86_64"  ;;
 esac
-[ -d "$NDK/toolchains/llvm/prebuilt/$NDK_HOST" ] || {
-    echo "[!] NDK prebuilt not found: $NDK/toolchains/llvm/prebuilt/$NDK_HOST"
-    exit 1
-}
-echo "[*] NDK: $NDK ($NDK_HOST)"
 
-# ---------------------------------------------------------------------------
-# wayland-scanner detection
-# ---------------------------------------------------------------------------
-WAYLAND_SCANNER="${WAYLAND_SCANNER:-$(command -v wayland-scanner 2>/dev/null || true)}"
-[ -z "$WAYLAND_SCANNER" ] && [ -x /usr/bin/wayland-scanner ] && WAYLAND_SCANNER=/usr/bin/wayland-scanner
-[ -n "$WAYLAND_SCANNER" ] && [ -x "$WAYLAND_SCANNER" ] || {
-    echo "[!] wayland-scanner not found."
-    echo "    Arch:  pacman -S wayland"
-    echo "    Ubuntu: apt install libwayland-dev"
+if [ ! -d "$NDK/toolchains/llvm/prebuilt/$NDK_HOST" ]; then
+    echo "[!] NDK toolchain not found: $NDK/toolchains/llvm/prebuilt/$NDK_HOST"
+    echo "    Your NDK may be corrupted or the wrong version."
     exit 1
-}
+fi
+
+echo "[*] NDK: $NDK"
+echo "[*] Host: $NDK_HOST"
 
 # ---------------------------------------------------------------------------
 # Working directories (inside the submodule, not tracked by Droidspaces git)
@@ -88,7 +183,8 @@ if [ -d "$FFI_SRC" ] && { [ ! -f "$FFI_SRC/.ffi-version" ] || \
 fi
 if [ ! -f "$FFI_TAR" ]; then
     echo "[*] Downloading libffi $FFI_VERSION..."
-    curl -sL "https://github.com/libffi/libffi/releases/download/v${FFI_VERSION}/libffi-${FFI_VERSION}.tar.gz" \
+    curl -L --progress-bar \
+        "https://github.com/libffi/libffi/releases/download/v${FFI_VERSION}/libffi-${FFI_VERSION}.tar.gz" \
         -o "$FFI_TAR"
 fi
 if [ ! -d "$FFI_SRC" ] || [ ! -f "$FFI_SRC/configure" ]; then
@@ -106,11 +202,14 @@ mkdir -p "$FFI_INSTALL" "$FFI_SRC/build-android"
     CC="$NDK/toolchains/llvm/prebuilt/$NDK_HOST/bin/aarch64-linux-android23-clang" \
     CFLAGS="-DANDROID -fPIC -std=gnu11" \
     LDFLAGS="-fPIC" \
-    "$FFI_SRC/configure" --host=aarch64-linux-android --prefix="$FFI_INSTALL" \
-        --disable-docs --disable-multi-os-directory --disable-static \
-        >/dev/null 2>&1)
-make -C "$FFI_SRC/build-android" -j"$(nproc)" >/dev/null 2>&1
-make -C "$FFI_SRC/build-android" install >/dev/null 2>&1
+    "$FFI_SRC/configure" \
+        --host=aarch64-linux-android \
+        --prefix="$FFI_INSTALL" \
+        --disable-docs \
+        --disable-multi-os-directory \
+        --disable-static)
+make -C "$FFI_SRC/build-android" -j"$(nproc)"
+make -C "$FFI_SRC/build-android" install
 echo "[+] libffi built"
 
 export PKG_CONFIG_PATH="$FFI_INSTALL/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
@@ -125,9 +224,9 @@ if [ -d "$WAYLAND_SRC" ]; then
 fi
 
 HOST_VER="$(pkg-config --modversion wayland-scanner 2>/dev/null || true)"
-WAYLAND_VERSION="${WAYLAND_VERSION:-${HOST_VER:-1.25.0}}"
+WAYLAND_VERSION="${WAYLAND_VERSION:-${HOST_VER:-1.23.0}}"
 echo "[*] Cloning wayland $WAYLAND_VERSION..."
-git clone --quiet --depth 1 --branch "$WAYLAND_VERSION" \
+git clone --depth 1 --branch "$WAYLAND_VERSION" \
     https://gitlab.freedesktop.org/wayland/wayland.git "$WAYLAND_SRC"
 rm -rf "$WAYLAND_SRC/.git"
 
@@ -143,10 +242,9 @@ meson setup "$WAYLAND_SRC/build-android" "$WAYLAND_SRC" \
     -Ddocumentation=false \
     -Ddtd_validation=false \
     --prefix "$WAYLAND_OUT" \
-    --libdir lib \
-    >/dev/null 2>&1
-meson compile -C "$WAYLAND_SRC/build-android" >/dev/null 2>&1
-meson install -C "$WAYLAND_SRC/build-android" >/dev/null 2>&1
+    --libdir lib
+meson compile -C "$WAYLAND_SRC/build-android"
+meson install -C "$WAYLAND_SRC/build-android"
 echo "[+] libwayland-server built"
 
 # ---------------------------------------------------------------------------
@@ -154,12 +252,8 @@ echo "[+] libwayland-server built"
 # ---------------------------------------------------------------------------
 mkdir -p "$JNILIBS"
 
-# libwayland-server.so — meson installs a versioned .so + unversioned symlink;
-# we only need the unversioned one (linker resolves it at load time on Android).
+# cp -L resolves symlinks to plain files — APK packager needs real files.
 cp -L "$WAYLAND_OUT/lib/libwayland-server.so" "$JNILIBS/libwayland-server.so"
-
-# libffi.so — autotools installs libffi.so.X.Y.Z + symlinks; copy the
-# unversioned symlink as a regular file so the APK packages it correctly.
 cp -L "$FFI_INSTALL/lib/libffi.so" "$JNILIBS/libffi.so"
 
 echo ""
@@ -168,4 +262,4 @@ ls -lh "$JNILIBS"/*.so
 echo ""
 echo "[!] Commit the .so files with the wayland version in the message:"
 echo "    git add Android/app/src/main/jniLibs/arm64-v8a/"
-echo "    git commit -m \"chore(jniLibs): update wayland prebuilts to $WAYLAND_VERSION\""
+echo "    git commit -m \"chore(jniLibs): add wayland prebuilts (wayland-server $WAYLAND_VERSION)\""
