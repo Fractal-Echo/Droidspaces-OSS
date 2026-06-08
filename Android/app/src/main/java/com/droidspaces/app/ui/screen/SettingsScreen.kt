@@ -68,7 +68,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 fun SettingsScreen(
     onBack: () -> Unit,
     onNavigateToInstallation: () -> Unit = {},
-    onNavigateToRequirements: () -> Unit = {}
+    onNavigateToRequirements: () -> Unit = {},
+    onNavigateToWaylandDisplay: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -246,6 +247,16 @@ fun SettingsScreen(
                         prefsManager.isWaylandCompositorEnabled = checked
                     }
                 )
+
+                // Open Display — only shown when compositor is running
+                if (isWaylandRunning) {
+                    SettingsRowCard(
+                        icon = Icons.Default.DesktopWindows,
+                        title = context.getString(R.string.wayland_open_display),
+                        subtitle = context.getString(R.string.wayland_open_display_summary),
+                        onClick = onNavigateToWaylandDisplay,
+                    )
+                }
             }
 
             val isBackendAvailable = appStateViewModel.isBackendAvailable

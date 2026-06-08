@@ -44,10 +44,11 @@ set_target_properties(ffi PROPERTIES
 # ---------------------------------------------------------------------------
 add_library(wayland-compositor SHARED
 
-    # Our JNI bridge (com.droidspaces.app.wayland.WaylandManager)
+    # Our JNI bridge (com.droidspaces.app.wayland.WaylandManager + WaylandSurface)
     ds_wayland_bridge.c
 
-    # Compositor core — identical set to Android.mk, minus renderer.c and jni_bridge.c
+    # Compositor core — identical set to Android.mk, minus jni_bridge.c
+    # renderer.c is included here because WaylandSurface uses EGL rendering
     ${COMPOSITOR_SRC}/compositor.c
     ${COMPOSITOR_SRC}/buffer.c
     ${COMPOSITOR_SRC}/linux_dmabuf.c
@@ -69,6 +70,7 @@ add_library(wayland-compositor SHARED
     ${COMPOSITOR_SRC}/relative_pointer.c
     ${COMPOSITOR_SRC}/presentation.c
     ${COMPOSITOR_SRC}/keycode_map.c
+    ${COMPOSITOR_SRC}/renderer.c
 
     # Generated protocol stubs — exact set from Android.mk
     ${PROTOCOL_SRC}/xdg-shell-server-protocol.c
