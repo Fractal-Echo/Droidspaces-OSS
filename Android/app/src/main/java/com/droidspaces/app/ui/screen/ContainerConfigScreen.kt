@@ -63,6 +63,7 @@ fun ContainerConfigScreen(
     initialEnableVirgl: Boolean = false,
     initialVirglExtraFlags: String = "",
     initialEnablePulseaudio: Boolean = false,
+    initialEnableWayland: Boolean = false,
     initialSelinuxPermissive: Boolean = false,
     initialVolatileMode: Boolean = false,
     initialBindMounts: List<BindMount> = emptyList(),
@@ -87,6 +88,7 @@ fun ContainerConfigScreen(
         enableVirgl: Boolean,
         virglExtraFlags: String,
         enablePulseaudio: Boolean,
+        enableWayland: Boolean,
         selinuxPermissive: Boolean,
         volatileMode: Boolean,
         bindMounts: List<BindMount>,
@@ -113,6 +115,7 @@ fun ContainerConfigScreen(
     var enableVirgl by remember { mutableStateOf(initialEnableVirgl) }
     var virglExtraFlags by remember { mutableStateOf(initialVirglExtraFlags) }
     var enablePulseaudio by remember { mutableStateOf(initialEnablePulseaudio) }
+    var enableWayland by remember { mutableStateOf(initialEnableWayland) }
     var selinuxPermissive by remember { mutableStateOf(initialSelinuxPermissive) }
     var volatileMode by remember { mutableStateOf(initialVolatileMode) }
     var bindMounts by remember { mutableStateOf(initialBindMounts) }
@@ -297,7 +300,7 @@ fun ContainerConfigScreen(
                             .clickable(
                                 enabled = isUpstreamValid,
                                 onClick = {
-                                    onNext(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, tx11ExtraFlags, enableVirgl, virglExtraFlags, enablePulseaudio, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, customInit, staticNatIp, forceCgroupv1, blockNestedNs, privileged, if (envFileContent.isBlank()) null else envFileContent, upstreamInterfaces, portForwards)
+                                    onNext(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, tx11ExtraFlags, enableVirgl, virglExtraFlags, enablePulseaudio, enableWayland, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, customInit, staticNatIp, forceCgroupv1, blockNestedNs, privileged, if (envFileContent.isBlank()) null else envFileContent, upstreamInterfaces, portForwards)
                                 },
                                 indication = androidx.compose.material.ripple.rememberRipple(bounded = true),
                                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -634,6 +637,15 @@ fun ContainerConfigScreen(
                 description = context.getString(R.string.enable_pulseaudio_description),
                 checked = enablePulseaudio,
                 onCheckedChange = { enablePulseaudio = it },
+                enabled = true
+            )
+
+            ToggleCard(
+                icon = Icons.Default.DesktopWindows,
+                title = context.getString(R.string.enable_wayland),
+                description = context.getString(R.string.enable_wayland_description),
+                checked = enableWayland,
+                onCheckedChange = { enableWayland = it },
                 enabled = true
             )
 

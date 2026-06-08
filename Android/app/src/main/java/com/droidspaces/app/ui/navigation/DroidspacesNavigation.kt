@@ -310,6 +310,7 @@ fun DroidspacesNavigation(
                 initialEnableVirgl = viewModel.enableVirgl,
                 initialVirglExtraFlags = viewModel.virglExtraFlags,
                 initialEnablePulseaudio = viewModel.enablePulseaudio,
+                initialEnableWayland = viewModel.enableWayland,
                 initialSelinuxPermissive = viewModel.selinuxPermissive,
                 initialVolatileMode = viewModel.volatileMode,
                 initialBindMounts = viewModel.bindMounts,
@@ -323,8 +324,8 @@ fun DroidspacesNavigation(
                 initialEnvFileContent = viewModel.envFileContent ?: "",
                 initialUpstreamInterfaces = viewModel.upstreamInterfaces,
                 initialPortForwards = viewModel.portForwards,
-                onNext = { netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, tx11ExtraFlags, enableVirgl, virglExtraFlags, enablePulseaudio, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, customInit, staticNatIp, forceCgroupv1, blockNestedNs, privileged, envFileContent, upstreamInterfaces, portForwards ->
-                    viewModel.setConfig(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, tx11ExtraFlags, enableVirgl, virglExtraFlags, enablePulseaudio, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, customInit, staticNatIp, envFileContent, upstreamInterfaces, portForwards, forceCgroupv1, blockNestedNs, privileged)
+                onNext = { netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, tx11ExtraFlags, enableVirgl, virglExtraFlags, enablePulseaudio, enableWayland, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, customInit, staticNatIp, forceCgroupv1, blockNestedNs, privileged, envFileContent, upstreamInterfaces, portForwards ->
+                    viewModel.setConfig(netMode, disableIPv6, enableAndroidStorage, enableHwAccess, enableGpuMode, enableTermuxX11, tx11ExtraFlags, enableVirgl, virglExtraFlags, enablePulseaudio, enableWayland, selinuxPermissive, volatileMode, bindMounts, dnsServers, runAtBoot, customInit, staticNatIp, envFileContent, upstreamInterfaces, portForwards, forceCgroupv1, blockNestedNs, privileged)
                     navController.navigate(Screen.SparseImageConfig.route)
                 },
                 onBack = {
