@@ -4,3 +4,11 @@
 [submodule "third_party/trierarch"]
 	path = third_party/trierarch
 	url = https://github.com/Beauty114514/trierarch
+[submodule "external/www"]
+	path = external/www
+	url = https://github.com/Droidspaces/webui.git
+	branch = main
+[submodule "external/socketd"]
+	path = external/socketd
+	url = https://github.com/Droidspaces/socketd.git
+	branch = main
