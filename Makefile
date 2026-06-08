@@ -127,8 +127,9 @@ help:
 	@echo "                 - Disable the private API backend bridge for minimal builds"
 	@echo ""
 	@echo "Other:"
-	@echo "  make clean     - Remove build artifacts"
+	@echo "  make clean          - Remove build artifacts"
 	@echo "  make debug-hardened - Build with ASan/UBSan/LSan to find bugs"
+	@echo "  make wayland-libs   - Build Wayland prebuilt .so files for Android"
 
 $(OUT_DIR):
 	$(Q)mkdir -p $(OUT_DIR)
@@ -281,16 +282,11 @@ clean:
 	@echo "[+] Cleaned build artifacts"
 
 # Build libwayland-server.so + libffi.so for the Android Wayland compositor.
-# Runs the trierarch build script and copies the output into jniLibs/.
-# Prerequisites: meson, ninja, wayland, wayland-protocols, Android NDK.
-WAYLAND_SCRIPT = third_party/trierarch/trierarch-wayland/scripts/build-wayland-android.sh
-JNILIBS_DIR    = Android/app/src/main/jniLibs/arm64-v8a
+# Calls scripts/build-wayland-libs.sh which handles libffi (autotools) and
+# wayland-server (meson) cross-compiled for arm64-v8a, then installs the
+# unversioned .so files directly into jniLibs/. Gradle + CMake handle the
+# rest at APK build time — no ndk-build invocation needed.
+WAYLAND_BUILD_SCRIPT = scripts/build-wayland-libs.sh
 
 wayland-libs:
-	@echo "[*] Building Wayland compositor prebuilt libs..."
-	@bash $(WAYLAND_SCRIPT)
-	@mkdir -p $(JNILIBS_DIR)
-	@cp -v third_party/trierarch/trierarch-wayland/out/arm64-v8a/libwayland-server.so $(JNILIBS_DIR)/
-	@cp -v third_party/trierarch/trierarch-wayland/out/arm64-v8a/libffi.so $(JNILIBS_DIR)/
-	@echo "[+] Wayland libs installed to $(JNILIBS_DIR)/"
-	@echo "[!] Commit the updated .so files with the wayland-server version in the message."
+	@bash $(WAYLAND_BUILD_SCRIPT)

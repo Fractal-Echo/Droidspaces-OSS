@@ -13,17 +13,19 @@ From the repo root, run:
 
     make wayland-libs
 
-This runs the trierarch build script and copies the output here.
-
 Prerequisites (host):
-    meson  ninja  wayland  wayland-protocols  Android NDK
+    meson  ninja  Android NDK
+
+    Arch:   pacman -S meson ninja wayland wayland-protocols
+    Ubuntu: apt install meson ninja-build libwayland-dev wayland-protocols
 
 The NDK is found automatically from $ANDROID_NDK_HOME or
-$HOME/Android/Sdk/ndk/. See:
-    third_party/trierarch/trierarch-wayland/scripts/build-wayland-android.sh
+$HOME/Android/Sdk/ndk/. The build script is scripts/build-wayland-libs.sh.
 
 ## Updating
 
-Re-run `make wayland-libs` whenever the wayland-server version needs
-to change, then commit the new .so files with the wayland version in
-the commit message.
+Re-run `make wayland-libs` when the wayland-server version needs to change,
+then commit the new .so files:
+
+    git add Android/app/src/main/jniLibs/arm64-v8a/
+    git commit -m "chore(jniLibs): update wayland prebuilts to X.Y.Z"
