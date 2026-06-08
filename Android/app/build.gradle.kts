@@ -63,6 +63,16 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // Wayland compositor is arm64-v8a only
+        ndk {
+            abiFilters += "arm64-v8a"
+        }
+        externalNativeBuild {
+            cmake {
+                path = file("src/main/jni/CMakeLists.txt")
+            }
+        }
     }
 
     signingConfigs {
@@ -165,6 +175,12 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    externalNativeBuild {
+        cmake {
+            version = "3.22.1"
+        }
     }
 
     kotlinOptions {

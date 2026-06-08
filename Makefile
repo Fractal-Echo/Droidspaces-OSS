@@ -101,7 +101,7 @@ find-cc = $(shell \
 		echo ""; \
 	fi)
 
-.PHONY: all help clean native x86_64 aarch64 armhf x86 riscv64 all-build tarball all-tarball debug-hardened
+.PHONY: all help clean native x86_64 aarch64 armhf x86 riscv64 all-build tarball all-tarball debug-hardened wayland-libs
 
 all: help
 
@@ -279,3 +279,18 @@ all-tarball: all-build
 clean:
 	@rm -rf $(OUT_DIR) $(BINARY_NAME)-*.tar.gz
 	@echo "[+] Cleaned build artifacts"
+
+# Build libwayland-server.so + libffi.so for the Android Wayland compositor.
+# Runs the trierarch build script and copies the output into jniLibs/.
+# Prerequisites: meson, ninja, wayland, wayland-protocols, Android NDK.
+WAYLAND_SCRIPT = third_party/trierarch/trierarch-wayland/scripts/build-wayland-android.sh
+JNILIBS_DIR    = Android/app/src/main/jniLibs/arm64-v8a
+
+wayland-libs:
+	@echo "[*] Building Wayland compositor prebuilt libs..."
+	@bash $(WAYLAND_SCRIPT)
+	@mkdir -p $(JNILIBS_DIR)
+	@cp -v third_party/trierarch/trierarch-wayland/out/arm64-v8a/libwayland-server.so $(JNILIBS_DIR)/
+	@cp -v third_party/trierarch/trierarch-wayland/out/arm64-v8a/libffi.so $(JNILIBS_DIR)/
+	@echo "[+] Wayland libs installed to $(JNILIBS_DIR)/"
+	@echo "[!] Commit the updated .so files with the wayland-server version in the message."
