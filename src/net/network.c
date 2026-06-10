@@ -67,11 +67,9 @@ static uint32_t ds_net_hash_string(const char *s) {
 }
 
 static void gateway_hash_key(struct ds_config *cfg, char *buf, size_t sz) {
-  const char *gw = (cfg && cfg->gateway_container[0])
-                       ? cfg->gateway_container
-                       : "gateway";
-  const char *net =
-      (cfg && cfg->gateway_net[0]) ? cfg->gateway_net : "lan";
+  const char *gw =
+      (cfg && cfg->gateway_container[0]) ? cfg->gateway_container : "gateway";
+  const char *net = (cfg && cfg->gateway_net[0]) ? cfg->gateway_net : "lan";
   snprintf(buf, sz, "%s:%s", gw, net);
 }
 
@@ -945,8 +943,7 @@ int setup_gateway_veth_side(struct ds_config *cfg, pid_t child_pid) {
     char gw_netns[PATH_MAX];
     snprintf(gw_netns, sizeof(gw_netns), "/proc/%d/ns/net", (int)gw_pid);
 
-    ds_log("[NET] Gateway: creating gateway veth %s <-> %s", gw_host,
-           gw_peer);
+    ds_log("[NET] Gateway: creating gateway veth %s <-> %s", gw_host, gw_peer);
     if (ds_nl_create_veth(ctx, gw_host, gw_peer) < 0) {
       ds_warn("[NET] Gateway: failed to create gateway veth pair");
       ds_nl_close(ctx);
@@ -972,8 +969,7 @@ int setup_gateway_veth_side(struct ds_config *cfg, pid_t child_pid) {
     int r = ds_nl_move_to_netns(ctx, gw_peer, gw_netns_fd);
     close(gw_netns_fd);
     if (r < 0) {
-      ds_warn("[NET] Gateway: failed to move %s into gateway netns",
-              gw_peer);
+      ds_warn("[NET] Gateway: failed to move %s into gateway netns", gw_peer);
       ds_nl_close(ctx);
       ds_config_free(&gw_cfg);
       return -1;
@@ -1005,12 +1001,11 @@ int setup_gateway_veth_side(struct ds_config *cfg, pid_t child_pid) {
     ds_warn("[NET] Gateway: failed to bring up %s", app_host);
 
   char child_netns[PATH_MAX];
-  snprintf(child_netns, sizeof(child_netns), "/proc/%d/ns/net",
-           (int)child_pid);
+  snprintf(child_netns, sizeof(child_netns), "/proc/%d/ns/net", (int)child_pid);
   int child_netns_fd = open(child_netns, O_RDONLY | O_CLOEXEC);
   if (child_netns_fd < 0) {
-    ds_warn("[NET] Gateway: failed to open container netns %s: %s",
-            child_netns, strerror(errno));
+    ds_warn("[NET] Gateway: failed to open container netns %s: %s", child_netns,
+            strerror(errno));
     ds_nl_close(ctx);
     ds_config_free(&gw_cfg);
     return -1;
@@ -1019,8 +1014,7 @@ int setup_gateway_veth_side(struct ds_config *cfg, pid_t child_pid) {
   int r = ds_nl_move_to_netns(ctx, app_peer, child_netns_fd);
   close(child_netns_fd);
   if (r < 0) {
-    ds_warn("[NET] Gateway: failed to move %s into container netns",
-            app_peer);
+    ds_warn("[NET] Gateway: failed to move %s into container netns", app_peer);
     ds_nl_close(ctx);
     ds_config_free(&gw_cfg);
     return -1;
@@ -1101,9 +1095,9 @@ int fix_networking_rootfs(struct ds_config *cfg) {
   /* IPv6 is enabled in host mode and gateway mode unless explicitly disabled.
    * Gateway mode is policy-owned by OpenWrt, so IPv6 RA/DHCPv6 should be able
    * to operate inside the application container netns. */
-  int ipv6_enabled = ((cfg->net_mode == DS_NET_HOST ||
-                       cfg->net_mode == DS_NET_GATEWAY) &&
-                      !cfg->disable_ipv6);
+  int ipv6_enabled =
+      ((cfg->net_mode == DS_NET_HOST || cfg->net_mode == DS_NET_GATEWAY) &&
+       !cfg->disable_ipv6);
   if (ipv6_enabled) {
     snprintf(hosts_content, sizeof(hosts_content),
              "127.0.0.1\tlocalhost\n"
@@ -1540,7 +1534,8 @@ void ds_net_cleanup(struct ds_config *cfg, pid_t container_pid) {
       return;
 
     char veth_host[IFNAMSIZ] = {0};
-    pid_t effective_pid = container_pid > 0 ? container_pid : cfg->container_pid;
+    pid_t effective_pid =
+        container_pid > 0 ? container_pid : cfg->container_pid;
     if (effective_pid > 0) {
       veth_host_name(effective_pid, veth_host, sizeof(veth_host));
       ds_nl_del_link(ctx, veth_host);

@@ -201,10 +201,10 @@ int check_ns(int flag, const char *name);
 /* Networking modes */
 
 enum ds_net_mode {
-  DS_NET_HOST = 0,    /* share host network namespace (default) */
-  DS_NET_NAT,         /* isolated netns + bridge + MASQUERADE      */
-  DS_NET_NONE,        /* isolated netns with loopback only          */
-  DS_NET_GATEWAY,     /* isolated netns attached to gateway LAN     */
+  DS_NET_HOST = 0, /* share host network namespace (default) */
+  DS_NET_NAT,      /* isolated netns + bridge + MASQUERADE      */
+  DS_NET_NONE,     /* isolated netns with loopback only          */
+  DS_NET_GATEWAY,  /* isolated netns attached to gateway LAN     */
 };
 
 /* Opaque RTNETLINK context - defined in ds_netlink.c */
@@ -319,17 +319,17 @@ typedef enum {
 
 struct ds_config {
   /* Paths */
-  char rootfs_path[PATH_MAX];     /* --rootfs=  */
-  char rootfs_img_path[PATH_MAX]; /* --rootfs-img= */
-  char pidfile[PATH_MAX];         /* --pidfile= or auto-resolved */
-  char container_name[256];       /* --name= (mandatory) */
-  char hostname[256];             /* --hostname= or container_name */
-  char dns_servers[1024];         /* --dns= (comma/space separated) */
-  enum ds_net_mode net_mode;      /* --net=host|nat|none|gateway */
-  char dns_server_content[1024];  /* In-memory DNS config for boot */
-  char gateway_container[256];    /* --gateway=NAME for gateway mode */
-  char gateway_net[64];           /* --gateway-net=NAME (default: lan) */
-  char gateway_bridge[IFNAMSIZ];  /* optional host bridge name */
+  char rootfs_path[PATH_MAX];        /* --rootfs=  */
+  char rootfs_img_path[PATH_MAX];    /* --rootfs-img= */
+  char pidfile[PATH_MAX];            /* --pidfile= or auto-resolved */
+  char container_name[256];          /* --name= (mandatory) */
+  char hostname[256];                /* --hostname= or container_name */
+  char dns_servers[1024];            /* --dns= (comma/space separated) */
+  enum ds_net_mode net_mode;         /* --net=host|nat|none|gateway */
+  char dns_server_content[1024];     /* In-memory DNS config for boot */
+  char gateway_container[256];       /* --gateway=NAME for gateway mode */
+  char gateway_net[64];              /* --gateway-net=NAME (default: lan) */
+  char gateway_bridge[IFNAMSIZ];     /* optional host bridge name */
   char gateway_lan_ifname[IFNAMSIZ]; /* ifname inside gateway (default: eth1) */
 
   /* UUID for PID discovery */
