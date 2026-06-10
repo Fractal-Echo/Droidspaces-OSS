@@ -131,6 +131,7 @@ What makes Droidspaces unique is its **zero-dependency, native execution** on bo
 
 - [What is Droidspaces?](#what-is-droidspaces)
 - [Features](#features)
+- [Display, Audio & Desktop](#display-audio-desktop)
 - [Security & Isolation Philosophy](#security-model)
 - [Droidspaces vs The Alternatives](#droidspaces-vs-the-alternatives)
 - [Requirements](#requirements)
@@ -175,8 +176,9 @@ The entire runtime is a **single static binary** under 400KB, compiled against m
 | **Deep Android Integration** | Supports two daemon modes: **Native init.rc** (lowest-level integration with auto-spawn/unkillable persistence) and **Userspace Daemon** (app-togglable, starts via `post-fs-data.sh`, no image modification required). **Both modes bypass root-domain seccomp blocks to ensure stable container lifecycles** [[init.rc Developer Guide](./init/README.md)]. |
 | **Namespace Isolation** | Complete isolation via PID, MNT, UTS, IPC, and Cgroup namespaces. Each container has its own process tree, mount table, hostname, IPC resources, and cgroup hierarchy. |
 | **Network Isolation** | **3 Networking Modes (Host, NAT, None)**. Pure network isolation via `CLONE_NEWNET` (NAT/None modes) or shared host networking (Host mode). Works on both Android and Linux. |
-| **Android GPU Acceleration** | Native hardware acceleration for Qualcomm Adreno GPUs via the Turnip driver. Use our [pre-built rootfs templates](https://github.com/ravindu644/Droidspaces-rootfs-builder/releases/latest) for an out-of-the-box experience. [[More info](./Documentation/GPU-Acceleration.md)] |
-| **Linux GPU Acceleration** | Zero-configuration GPU acceleration for AMD and Intel GPUs on Linux desktop hosts. [[More info](./Documentation/GPU-Acceleration.md)] |
+| **Android Display & GPU** | Three acceleration modes: **llvmpipe** (software, all devices), **VirGL** (Mali/PowerVR), and **Turnip** (native Qualcomm/Adreno). As of Droidspaces v6.3.0, the X server and VirGL server launch automatically when the container starts - zero manual Termux commands required. Environment variables (`DISPLAY=:5`, `GALLIUM_DRIVER=virpipe`) are injected automatically. [[More info](./Documentation/Graphics-and-Audio.md)] |
+| **Android Sound** | PulseAudio daemon runs on the host as the Termux user so Android's audio HAL grants it device access. The socket is bind-mounted into the container at `/tmp/.pulse-socket` and `PULSE_SERVER` is injected automatically - audio just works. [[More info](./Documentation/Graphics-and-Audio.md#pulseaudio)] |
+| **Linux GPU Acceleration** | Zero-configuration GPU acceleration for AMD and Intel GPUs on Linux desktop hosts. [[More info](./Documentation/Graphics-and-Audio.md)] |
 | **Port Forwarding** | Forward host ports to the container in NAT mode (e.g., `--port 22:22`). Supports TCP and UDP, as well as ranges like `1-500:1-500`. |
 | **Volatile Mode** | Ephemeral containers using OverlayFS. All changes are stored in RAM and discarded on exit. Perfect for testing and development. |
 | **Custom Bind Mounts** | Map host directories into containers at arbitrary mount points. Supports both chained (`-B a:b -B c:d`) and comma-separated (`-B a:b,c:d`) syntax. |
@@ -193,6 +195,18 @@ The entire runtime is a **single static binary** under 400KB, compiled against m
 | **Cgroup Isolation (v1/v2)** | Per-container cgroup hierarchies (`/sys/fs/cgroup/droidspaces/<name>`) with full systemd compatibility. Supports both legacy v1 and modern v2 hierarchies. |
 | **Adaptive Security & Deadlock Shield** | Kernel-aware BPF filters resolve FBE keyring conflicts automatically on legacy kernels. A manual **Deadlock Shield** toggle is available to fix the specific VFS `grab_super()` deadlock on affected legacy devices (e.g., kernel 4.14.113). When the shield is disabled (default), Droidspaces grants full namespace freedom enabling features like **nested containers/Docker** natively on all kernels. |
 | **Privileged Mode** | Gain full access with the `--privileged` flag! Use with caution: do not report bugs when using this flag as it relaxes several security barriers for features like Flatpak/Bwrap/K3S. |
+
+---
+
+<a id="display-audio-desktop"></a>
+
+## Display, Audio & Desktop
+
+As of v6.3.0, Droidspaces automatically launches the Termux:X11 X server, VirGL server, and PulseAudio daemon when the corresponding toggles are enabled in a container's configuration. The environment variables `DISPLAY=:5`, `GALLIUM_DRIVER=virpipe`, and `PULSE_SERVER` are injected into the container via `/run/droidspaces.env` before the init system finishes booting - displays, GPU acceleration, and audio all work without manual setup.
+
+Our official XFCE rootfs tarballs ship with **XFCE auto-boot** pre-wired: when Termux:X11 is enabled, XFCE launches automatically and appears in the Termux:X11 app - no terminal commands needed. Download from the [Rootfs Repository](./Documentation/Usage-Android-App.md#rootfs-repository) (search "XFCE") or from [Droidspaces Rootfs Builder Releases](https://github.com/Droidspaces/Droidspaces-rootfs-builder/releases/latest).
+
+For GPU acceleration methods, sound setup, DE auto-boot internals, and Linux desktop configuration, see the **[Display, Audio & Desktop Guide](./Documentation/Graphics-and-Audio.md)**.
 
 ---
 
@@ -246,7 +260,7 @@ The entire runtime is a **single static binary** under 400KB, compiled against m
 | **Run at Boot** | **Yes (native `init.rc` / `service.d`). Auto-starts containers even if the phone is locked, `/data` is encrypted, and before any user app has even started.** | No | No | No | No |
 | **Network Isolation on Android** | **First-in-class. Full NAT/Veth + internet works out of the box. No manual configuration needed.** | Internet works only in host-network mode (`lxc.net.0.type = none`). True network isolation (veth + NAT) often requires manual bridge, iptables, and ip_forward setup - and still breaks on most devices. | Requires `--network host` to get internet; actual network isolation with internet access often does not work reliably on Android. | None (no network namespace) | None (no network namespace) |
 | **Hardware & Native GPU Access** | **Full (single toggle). Adreno Turnip, USB, sensors, network interfaces, block devices. Full `systemd-udevd` support - behaves like a real Linux PC.** | Manual bind mounts, no udev | Manual bind mounts, no udev | Manual bind mounts, no udev | None |
-| **Termux-X11 Support** | **Full (single toggle)** | Manual socket passthrough | Manual socket passthrough | Manual socket passthrough | Manual socket passthrough |
+| **Termux-X11 Support** | **Full (single toggle). X server and VirGL server auto-launch on container start. Env vars (`DISPLAY=:5`, `GALLIUM_DRIVER=virpipe`) injected automatically.** | Manual socket passthrough | Manual socket passthrough | Manual socket passthrough | Manual socket passthrough |
 | **Privileged Mode** | **Full + customizable (`--nomask`, `--nocaps`, `--noseccomp`, etc.)** | Manual config | Yes (`--privileged`) | Full (no guardrails) | No |
 | **Nested Containers (Docker-in-DS)** | **Natively supported on all kernels** | Complex manual setup | Complex manual setup | No | No |
 | **Ephemeral / Volatile Containers** | **Yes (OverlayFS, RAM-backed, zero persistence on exit)** | No | Yes | No | No |
@@ -373,6 +387,7 @@ sudo ./droidspaces check
 | Document | Description |
 |----------|-------------|
 | [Feature Deep Dives](Documentation/Features.md) | Detailed explanation of each major feature. |
+| [Display, Audio & Desktop Guide](Documentation/Graphics-and-Audio.md) | GPU acceleration, PulseAudio sound, and desktop environment auto-boot on Android and Linux. |
 | [Cool Things You Can Do (Tailscale, Docker, etc.)](Documentation/Cool-things-you-can-do.md) |
 | [Uninstallation Guide](Documentation/Uninstallation.md) | How to remove Droidspaces from your system. |
 
