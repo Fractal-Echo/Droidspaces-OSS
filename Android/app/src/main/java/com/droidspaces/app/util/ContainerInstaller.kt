@@ -150,6 +150,14 @@ object ContainerInstaller {
             logger.i("Container configuration saved")
             createdPaths.add(configFilePath)
 
+            if (config.useSparseImage) {
+                SparseImageInstaller.unmountSparseImage(
+                    mountPoint = "$containerPath/rootfs",
+                    imgPath = rootfsPath,
+                    logger = logger
+                )
+            }
+
             // Step 5.1: Write .env file if content exists
             if (!config.envFileContent.isNullOrBlank()) {
                 logger.i("Writing environment variables (.env)...")
