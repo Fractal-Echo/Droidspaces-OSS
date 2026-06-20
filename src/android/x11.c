@@ -40,6 +40,37 @@ static int resolve_termux_uid(void) {
   return uid;
 }
 
+static void prepare_x11_socket_dirs(int uid) {
+  mkdir_p(TX11_PREFIX "/tmp", 01777);
+  chmod(TX11_PREFIX "/tmp", 01777);
+
+  mkdir_p(TX11_SOCK_DIR, 01777);
+  if (chown(TX11_SOCK_DIR, (uid_t)uid, (gid_t)uid) < 0) {
+    /* ignore */
+  }
+  chmod(TX11_SOCK_DIR, 01777);
+}
+
+static void start_termux_x11_activity(void) {
+  pid_t child = fork();
+  if (child < 0)
+    return;
+  if (child == 0) {
+    int devnull = open("/dev/null", O_RDWR);
+    if (devnull >= 0) {
+      dup2(devnull, STDIN_FILENO);
+      dup2(devnull, STDOUT_FILENO);
+      dup2(devnull, STDERR_FILENO);
+      close(devnull);
+    }
+    char *argv[] = {"/system/bin/am", "start", "-n",
+                    "com.termux.x11/.MainActivity", NULL};
+    execv(argv[0], argv);
+    _exit(127);
+  }
+  waitpid(child, NULL, 0);
+}
+
 static int x11_socket_accepts_connections(void) {
   int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
   if (fd < 0)
@@ -132,10 +163,7 @@ static void xserver_child_wrapper(int ready_fd, void *user_data) {
   setenv("HOME", TX11_HOME, 1);
 
   /* Socket dir -- created as root before we drop privs */
-  mkdir_p(TX11_SOCK_DIR, 01777);
-  if (chown(TX11_SOCK_DIR, (uid_t)args->uid, (gid_t)args->uid) < 0) {
-    /* ignore */
-  }
+  prepare_x11_socket_dirs(args->uid);
 
   /* Drop privileges */
   if (ds_drop_privileges(args->uid) < 0) {
@@ -247,6 +275,9 @@ int ds_x11_daemon_start(struct ds_config *cfg) {
   int uid = resolve_termux_uid();
   if (uid < 0)
     return -1;
+
+  prepare_x11_socket_dirs(uid);
+  start_termux_x11_activity();
 
   ds_log("[X11] launching Termux-X11 server (uid=%d)", uid);
   pid_t child = spawn_xserver(uid, TX11_DISPLAY_STR, cfg->tx11_extra_flags);
