@@ -4,6 +4,8 @@ run-name: ${{ github.event.head_commit.message || format('Release {0}', github.e
 on:
   push:
     branches: [ "**" ]
+    tags:
+      - "v*"
   pull_request:
     branches: [ "**" ]
   workflow_dispatch:
@@ -23,9 +25,11 @@ jobs:
     name: Build Backend & Android App
     runs-on: ubuntu-latest
     env:
-      HAS_TELEGRAM: ${{ secrets.API_ID != '' && secrets.API_HASH != '' }}
+      HAS_RELEASE_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE != '' }}
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: recursive
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -33,11 +37,23 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         cache: gradle
+        cache-dependency-path: |
+          Android/*.gradle*
+          Android/gradle.properties
+          Android/gradle/wrapper/gradle-wrapper.properties
+
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Install Android SDK packages
+      run: |
+        yes | sdkmanager --licenses >/dev/null
+        sdkmanager "platforms;android-34" "build-tools;34.0.0"
 
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y build-essential wget tree zstd
+        sudo apt install -y build-essential dpkg-dev file wget tree zstd
 
     - name: Download Toolchains
       run: |
@@ -75,10 +91,10 @@ jobs:
         scripts/mkdeb.sh
 
     - name: Decode Keystore
+      if: env.HAS_RELEASE_KEYSTORE == 'true'
       env:
         RELEASE_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE }}
-      if: "${{ env.RELEASE_KEYSTORE != '' }}"
-      run: echo "${{ env.RELEASE_KEYSTORE }}" | base64 -d > droidspaces.keystore
+      run: printf '%s' "$RELEASE_KEYSTORE" | base64 -d > droidspaces.keystore
 
     - name: Grant execute permission for gradlew
       run: chmod +x Android/gradlew
@@ -99,74 +115,71 @@ jobs:
       run: |
         cd Android
         ./gradlew assembleRelease \
-          -PKEYSTORE_PASSWORD="${{ secrets.KEYSTORE_PASSWORD }}" \
-          -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}" \
-          -PKEY_PASSWORD="${{ secrets.KEY_PASSWORD }}"
+          -PKEYSTORE_PASSWORD="${KEYSTORE_PASSWORD:-}" \
+          -PKEY_ALIAS="${KEY_ALIAS:-}" \
+          -PKEY_PASSWORD="${KEY_PASSWORD:-}"
 
     - name: Stage & Rename Artifacts
       run: |
-        TAG="${{ github.event.inputs.tag_name || 'test' }}"
+        TAG="${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.tag_name || 'test' }}"
         DATE=$(date +%Y-%m-%d)
         APK_NAME="Droidspaces-universal-${TAG}-${DATE}.apk"
-        TAR_NAME=$(ls droidspaces-v*-*.tar.gz)
+        TAR_NAME=$(find . -maxdepth 1 -name 'droidspaces-v*-*.tar.gz' -printf '%f\n' | head -n 1)
+        if [ -z "$TAR_NAME" ]; then
+          echo "No Droidspaces tarball found"
+          exit 1
+        fi
         mkdir -p dist
         mv Android/app/build/outputs/apk/release/app-release.apk dist/${APK_NAME}
-        mv ${TAR_NAME} dist/
+        mv "$TAR_NAME" dist/
         mv droidspaces_*.deb dist/
         echo "APK_FILE=dist/${APK_NAME}" >> $GITHUB_ENV
         echo "TAR_FILE=dist/${TAR_NAME}" >> $GITHUB_ENV
 
-    - name: Generate Telegram Message
-      if: github.event_name != 'pull_request'
+    - name: Build Summary
       run: |
-        EVENT_TYPE="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true' && 'Official Release' || 'Git Push' }}"
-        COMMIT_MSG=$(git log -1 --pretty=format:%s)
         {
-          echo "TELEGRAM_MESSAGE<<EOF"
-          echo "**Droidspaces Build Successful**"
+          echo "## Droidspaces build artifacts"
           echo ""
-          echo "**Repository:** [${{ github.repository }}](https://github.com/${{ github.repository }})"
-          echo "**Author:** [${{ github.actor }}](https://github.com/${{ github.actor }})"
-          echo "**Event:** $EVENT_TYPE"
+          echo "- APK: \`${APK_FILE}\`"
+          echo "- Tarball: \`${TAR_FILE}\`"
+          echo "- Debian packages: \`dist/*.deb\`"
           echo ""
-          echo "**Commit Message:**"
-          echo ""
-          echo "\`\`\`"
-          echo "$COMMIT_MSG"
-          echo "\`\`\`"
-          echo "EOF"
-        } >> "$GITHUB_ENV"
+          echo "Download them from the workflow run artifacts below."
+        } >> "$GITHUB_STEP_SUMMARY"
 
-    - name: Upload Final Artifacts (APK, Tarball & Debian Packages)
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: droidspaces-artifacts
-        path: dist/
+        name: droidspaces-apk
+        path: dist/*.apk
+        if-no-files-found: error
 
-    - name: Send Telegram Notification
-      if: |
-        github.event_name != 'pull_request' &&
-        env.HAS_TELEGRAM == 'true'
-      uses: xz-dev/TelegramFileUploader@v1
+    - name: Upload Tarball
+      uses: actions/upload-artifact@v4
       with:
-        to-who: ${{ secrets.TELEGRAM_TO }}
-        message: ${{ env.TELEGRAM_MESSAGE }}
-        files: |
-          ${{ env.APK_FILE }}
-          ${{ env.TAR_FILE }}
-      env:
-        API_ID: ${{ secrets.API_ID }}
-        API_HASH: ${{ secrets.API_HASH }}
-        BOT_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+        name: droidspaces-tarball
+        path: dist/*.tar.gz
+        if-no-files-found: error
+
+    - name: Upload Debian Packages
+      uses: actions/upload-artifact@v4
+      with:
+        name: droidspaces-debian-packages
+        path: dist/*.deb
+        if-no-files-found: error
 
   release:
     name: Create GitHub Release
     needs: [build]
     if: |
-      github.event_name == 'workflow_dispatch' &&
-      github.event.inputs.create_release == 'true' &&
-      github.event.inputs.tag_name != '' &&
-      github.event.inputs.tag_name != 'test'
+      startsWith(github.ref, 'refs/tags/v') ||
+      (
+        github.event_name == 'workflow_dispatch' &&
+        github.event.inputs.create_release == 'true' &&
+        github.event.inputs.tag_name != '' &&
+        github.event.inputs.tag_name != 'test'
+      )
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -202,8 +215,8 @@ jobs:
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ github.event.inputs.tag_name }}
-        name: Droidspaces ${{ github.event.inputs.tag_name || 'Development Build' }}
+        tag_name: ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.tag_name }}
+        name: Droidspaces ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.tag_name || 'Development Build' }}
         target_commitish: ${{ github.sha }}
         body: |
           ## What's Changed
