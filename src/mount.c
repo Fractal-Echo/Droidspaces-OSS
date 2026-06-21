@@ -841,27 +841,39 @@ int setup_custom_binds(struct ds_config *cfg, const char *rootfs) {
 /* Probe superblock magic bytes to identify the filesystem type. */
 static const char *detect_fs_type(const char *img_path) {
   int fd = open(img_path, O_RDONLY | O_CLOEXEC);
-  if (fd < 0)
+  if (fd < 0) {
+    ds_warn("detect_fs_type: failed to open %s: %s", img_path, strerror(errno));
     return NULL;
+  }
 
   uint8_t buf[8];
   const char *result = NULL;
 
   /* offset 0x438: ext2/3/4 (0xEF53 LE) */
-  if (pread(fd, buf, 2, 0x438) == 2) {
+  ssize_t bytes_read = pread(fd, buf, 2, 0x438);
+  if (bytes_read == 2) {
     uint16_t m = (uint16_t)buf[0] | (uint16_t)buf[1] << 8;
     if (m == 0xEF53) {
       result = "ext4";
       goto out;
+    } else {
+      ds_warn("detect_fs_type: read magic 0x%04X from %s, expected 0xEF53", m, img_path);
     }
+  } else {
+    ds_warn("detect_fs_type: pread of 2 bytes from %s at 0x438 returned %zd: %s",
+            img_path, bytes_read, bytes_read < 0 ? strerror(errno) : "EOF");
   }
 
   /* offset 0x10040: btrfs ("_BHRfS_M") */
-  if (pread(fd, buf, 8, 0x10040) == 8) {
+  bytes_read = pread(fd, buf, 8, 0x10040);
+  if (bytes_read == 8) {
     if (memcmp(buf, "_BHRfS_M", 8) == 0) {
       result = "btrfs";
       goto out;
     }
+  } else {
+    ds_warn("detect_fs_type: pread of 8 bytes from %s at 0x10040 returned %zd: %s",
+            img_path, bytes_read, bytes_read < 0 ? strerror(errno) : "EOF");
   }
 
 out:
@@ -1022,7 +1034,8 @@ static int open_loop_dev(long devnr, char *path_out, size_t path_size) {
     return fd;
 
   /* Last resort: create the node ourselves */
-  if (mknod(path_out, S_IFBLK | 0660, makedev(7, (int)devnr)) == 0) {
+  int minor = android ? (int)devnr * 8 : (int)devnr;
+  if (mknod(path_out, S_IFBLK | 0660, makedev(7, minor)) == 0) {
     fd = open(path_out, O_RDWR | O_CLOEXEC);
     if (fd >= 0)
       return fd;
