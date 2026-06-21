@@ -1105,6 +1105,12 @@ static int loop_attach(const char *img_path, char *loop_path_out,
           break;
       }
     }
+    if (loop_fd < 0) {
+      long devnr = loop_find_free_devnr();
+      if (devnr >= 0) {
+        loop_fd = loop_attach_one(devnr, img_fd, img_path, loop_path_out, path_size);
+      }
+    }
   } else {
     long devnr = loop_find_free_devnr();
     if (devnr >= 0)
